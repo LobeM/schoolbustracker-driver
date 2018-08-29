@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "320871669538",
+    "firebase_url": "https://school-bus-tracker-5105d.firebaseio.com",
+    "project_id": "school-bus-tracker-5105d",
+    "storage_bucket": "school-bus-tracker-5105d.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:320871669538:android:f759aea80d318bc0",
+        "android_client_info": {
+          "package_name": "com.lobemusonda.schoolbustracker_driver"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "320871669538-tck8vi69q6pk38mq9os3v001l3d500ov.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.lobemusonda.schoolbustracker_driver",
+            "certificate_hash": "98c6a4df416e0cf25332d6a4942900c33ee2b8fd"
+          }
+        },
+        {
+          "client_id": "320871669538-rav8b3ago2r8k4ijs132m44rlib428j7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBn_Yo80SZm_a1oUiZzN2WMQ8pnBiTa-ME"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "320871669538-rav8b3ago2r8k4ijs132m44rlib428j7.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
