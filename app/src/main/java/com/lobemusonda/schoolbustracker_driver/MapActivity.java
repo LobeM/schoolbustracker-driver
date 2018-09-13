@@ -97,7 +97,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 mDatabase.getReference().child("users").child(mAuth.getCurrentUser().getUid())
                         .child("latitude").setValue(mCurrentLocation.getLatitude());
                 mDatabase.getReference().child("users").child(mAuth.getCurrentUser().getUid())
-                        .child("latitude").setValue(mCurrentLocation.getLatitude());
+                        .child("longitude").setValue(mCurrentLocation.getLongitude());
                 mDatabase.getReference().child("users").child(mAuth.getCurrentUser().getUid())
                         .child("status").setValue(status).addOnCompleteListener(new OnCompleteListener<Void>() {
                     @Override
