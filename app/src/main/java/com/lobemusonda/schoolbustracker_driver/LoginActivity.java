@@ -108,7 +108,7 @@ public class LoginActivity extends AppCompatActivity {
                     mProgressBar.setVisibility(View.GONE);
                     String value = dataSnapshot.getValue(String.class);
                     if (value.equals("driver")) {
-                        Intent intent = new Intent(LoginActivity.this, MapActivity.class);
+                        Intent intent = new Intent(LoginActivity.this, MapsActivity.class);
                         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
                         startActivity(intent);
