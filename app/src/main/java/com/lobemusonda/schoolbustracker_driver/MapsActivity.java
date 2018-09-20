@@ -318,8 +318,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         mCurrentLocationMarker = mMap.addMarker(markerOptions);
 
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
-        mMap.animateCamera(CameraUpdateFactory.zoomBy(DEFAULT_ZOOM));
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, DEFAULT_ZOOM));
 
         if (mClient != null) {
             LocationServices.FusedLocationApi.removeLocationUpdates(mClient, this);
