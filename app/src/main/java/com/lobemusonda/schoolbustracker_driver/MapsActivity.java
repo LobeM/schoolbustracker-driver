@@ -46,6 +46,8 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
+import java.util.ArrayList;
+
 public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback,
         GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener,
@@ -56,7 +58,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1234;
 
     private FirebaseAuth mAuth;
-    private DatabaseReference mDatabaseReference;
+    private DatabaseReference mDatabaseReference, mDatabaseLocation;
 
     private Button mButtonStatus;
     private ProgressBar mProgressBar;
@@ -68,16 +70,18 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private Marker mCurrentLocationMarker;
 
     private boolean mIsOnline;
+    private ArrayList<ChildLocation> mChildrenLocations;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
 
-
-
         mAuth = FirebaseAuth.getInstance();
         mDatabaseReference = FirebaseDatabase.getInstance().getReference().child("users").child(mAuth.getCurrentUser().getUid());
+        mDatabaseLocation = FirebaseDatabase.getInstance().getReference("locations").child(mAuth.getCurrentUser().getUid());
+
+        mChildrenLocations = new ArrayList<>();
 
         getStatus();
 
@@ -135,8 +139,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         String value = dataSnapshot.getValue(String.class);
                         if (value.equals("offline")) {
                             updateStatus("online");
+                            getLocations();
                         } else {
                             updateStatus("offline");
+                            mMap.clear();
                         }
                     }
 
@@ -156,11 +162,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         });
     }
 
-    @Override
-    protected void onStart() {
-        super.onStart();
-    }
-
     private void getStatus() {
         mDatabaseReference.addValueEventListener(new ValueEventListener() {
 
@@ -178,6 +179,40 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             }
         });
+    }
+
+    public void getLocations() {
+        mDatabaseLocation.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                mChildrenLocations.clear();
+                for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                    ChildLocation childLocation = snapshot.getValue(ChildLocation.class);
+                    mChildrenLocations.add(childLocation);
+                }
+                setLocationMarkers();
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        });
+    }
+
+    private void setLocationMarkers() {
+        for (ChildLocation childLocation: mChildrenLocations) {
+            MarkerOptions markerOptions = new MarkerOptions();
+            double latitude = childLocation.getPickUp().getLatitude();
+            double longitude = childLocation.getPickUp().getLongitude();
+            String station = childLocation.getPickUp().getName();
+
+            LatLng latLng = new LatLng(latitude, longitude);
+            markerOptions.position(latLng);
+            markerOptions.title(station);
+            markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN));
+            mMap.addMarker(markerOptions);
+        }
     }
 
     @Override
@@ -265,7 +300,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     mButtonStatus.setText(R.string.online);
                     MarkerOptions markerOptions = new MarkerOptions();
                     markerOptions.position(latLng);
-                    markerOptions.title("Location");
+                    markerOptions.title("ChildLocation");
                     markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE));
 
                     mCurrentLocationMarker = mMap.addMarker(markerOptions);
@@ -345,7 +380,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         MarkerOptions markerOptions = new MarkerOptions();
         markerOptions.position(latLng);
-        markerOptions.title("Location");
+        markerOptions.title("ChildLocation");
         markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE));
 
         mCurrentLocationMarker = mMap.addMarker(markerOptions);
