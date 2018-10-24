@@ -140,6 +140,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         if (value.equals("offline")) {
                             updateStatus("online");
                             getLocations();
+                            getDirections();
                         } else {
                             updateStatus("offline");
                             mMap.clear();
@@ -391,5 +392,40 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             LocationServices.FusedLocationApi.removeLocationUpdates(mClient, this);
         }
 
+    }
+
+
+    public void getDirections(){
+        StringBuilder sb = new StringBuilder();
+        Object[] dataTransfer = new Object[4];
+
+        sb.append("https://maps.googleapis.com/maps/api/directions/json?");
+        sb.append("origin=" + mLastLocation.getLatitude() + "," + mLastLocation.getLongitude());
+        sb.append("&destination="+ -15.3931774 + "," + 28.3338944);
+        sb.append("&waypoints="+ waypoints());
+        sb.append("&key="+getResources().getString(R.string.API_key));
+
+        dataTransfer[0] = mMap;
+        dataTransfer[1] = sb.toString();
+        dataTransfer[2] = new LatLng(mLastLocation.getLatitude() , mLastLocation.getLongitude());
+        dataTransfer[3] = new LatLng(-15.3931774, 28.3338944);
+
+        GetDirectionsData getDirectionsData = new GetDirectionsData(getApplicationContext());
+        getDirectionsData.execute(dataTransfer);
+    }
+
+    private String waypoints() {
+        StringBuilder sb = new StringBuilder();
+
+        for (int i = 0; i < mChildrenLocations.size(); i++) {
+            String point = mChildrenLocations.get(i).getPickUp().getLatitude() + "," + mChildrenLocations.get(i).getPickUp().getLongitude();
+            sb.append("via:"+point);
+            if (i != (mChildrenLocations.size() - 1)) {
+                // Not last iteration
+                sb.append("|");
+            }
+        }
+
+        return sb.toString();
     }
 }
