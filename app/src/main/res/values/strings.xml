@@ -4,6 +4,7 @@
     <string name="login">Login</string>
     <string name="sign_up">Sign Up</string>
     <string name="email">email</string>
+    <string name="save">Save</string>
     <string name="password">password</string>
     <string name="full_name">full name</string>
     <string name="bus_no">bus number</string>
@@ -11,6 +12,7 @@
     <string name="start_trip">Getting status…</string>
     <string name="online">Online</string>
     <string name="offline">Offline</string>
+    <string name="school_name">School name</string>
     <string name="logout">Logout</string>
 
     <string name="navigation_drawer_open">Open navigation drawer</string>
@@ -20,4 +22,5 @@
     <string name="google_maps_API_key">AIzaSyAtDZuZNwYtQrRc75IdA2TBaRVBBgkSo_U</string>
     <string name="API_key">AIzaSyDSQR5HonLVinzu7udadK7PfWmcbh_boW8</string>
     <string name="title_activity_maps">Map</string>
+    <string name="change_school">Change School</string>
 </resources>

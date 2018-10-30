@@ -99,19 +99,20 @@ public class LoginActivity extends AppCompatActivity {
         });
     }
 
-    private void onAuthSuccess(FirebaseUser user) {
+    private void onAuthSuccess(final FirebaseUser user) {
         if (user != null) {
             mDatabase.getReference().child("users").child(user.getUid()).child("type")
                     .addListenerForSingleValueEvent(new ValueEventListener() {
                 @Override
                 public void onDataChange(DataSnapshot dataSnapshot) {
-                    mProgressBar.setVisibility(View.GONE);
                     String value = dataSnapshot.getValue(String.class);
                     if (value.equals("driver")) {
+                        checkSchool(user);
+                        /*
                         Intent intent = new Intent(LoginActivity.this, MapsActivity.class);
                         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                        startActivity(intent);
+                        startActivity(intent); */
                     } else {
                         Toast.makeText(getApplicationContext(), "You are not registered as a driver", Toast.LENGTH_SHORT).show();
                         FirebaseAuth.getInstance().signOut();
@@ -125,6 +126,32 @@ public class LoginActivity extends AppCompatActivity {
             });
 
         }
+    }
+
+    private void checkSchool(FirebaseUser user) {
+        mDatabase.getReference("users").child(user.getUid()).child("school")
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                mProgressBar.setVisibility(View.GONE);
+                if (!dataSnapshot.exists()) {
+                    Intent intent = new Intent(LoginActivity.this, AddSchoolActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    startActivity(intent);
+                } else {
+                    Intent intent = new Intent(LoginActivity.this, MapsActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    startActivity(intent);
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        });
     }
 
     public boolean isServicesOk() {

@@ -10,11 +10,9 @@ import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -58,7 +56,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1234;
 
     private FirebaseAuth mAuth;
-    private DatabaseReference mDatabaseReference, mDatabaseLocation;
+    private DatabaseReference mDatabaseUsers, mDatabaseLocation;
 
     private Button mButtonStatus;
     private ProgressBar mProgressBar;
@@ -78,7 +76,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         setContentView(R.layout.activity_maps);
 
         mAuth = FirebaseAuth.getInstance();
-        mDatabaseReference = FirebaseDatabase.getInstance().getReference().child("users").child(mAuth.getCurrentUser().getUid());
+        mDatabaseUsers = FirebaseDatabase.getInstance().getReference().child("users").child(mAuth.getCurrentUser().getUid());
         mDatabaseLocation = FirebaseDatabase.getInstance().getReference("locations").child(mAuth.getCurrentUser().getUid());
 
         mChildrenLocations = new ArrayList<>();
@@ -115,15 +113,21 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
+        Intent intent;
         switch (item.getItemId()) {
             case R.id.menuLogout:
-                if (mCurrentLocationMarker != null) {
+                if (mIsOnline) {
                     toggleStatus();
                 }
                 FirebaseAuth.getInstance().signOut();
-                Intent intent = new Intent(MapsActivity.this, MainActivity.class);
+                intent = new Intent(MapsActivity.this, MainActivity.class);
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(intent);
+                break;
+
+            case R.id.menuChangeSch:
+                intent = new Intent(MapsActivity.this, AddSchoolActivity.class);
                 startActivity(intent);
                 break;
         }
@@ -131,7 +135,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void toggleStatus() {
-        mDatabaseReference.child("status")
+        mDatabaseUsers.child("status")
                 .addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
                     public void onDataChange(DataSnapshot dataSnapshot) {
@@ -140,7 +144,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         if (value.equals("offline")) {
                             updateStatus("online");
                             getLocations();
-                            getDirections();
+                            getDestination();
                         } else {
                             updateStatus("offline");
                             mMap.clear();
@@ -155,7 +159,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void updateStatus(String status) {
-        mDatabaseReference.child("status").setValue(status).addOnCompleteListener(new OnCompleteListener<Void>() {
+        mDatabaseUsers.child("status").setValue(status).addOnCompleteListener(new OnCompleteListener<Void>() {
             @Override
             public void onComplete(@NonNull Task<Void> task) {
                 mProgressBar.setVisibility(View.GONE);
@@ -164,7 +168,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void getStatus() {
-        mDatabaseReference.addValueEventListener(new ValueEventListener() {
+        mDatabaseUsers.addValueEventListener(new ValueEventListener() {
 
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
@@ -331,11 +335,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void shareLocation(final LatLng latLng) {
-        mDatabaseReference.addListenerForSingleValueEvent(new ValueEventListener() {
+        mDatabaseUsers.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
-                mDatabaseReference.child("latitude").setValue(latLng.latitude);
-                mDatabaseReference.child("longitude").setValue(latLng.longitude);
+                mDatabaseUsers.child("latitude").setValue(latLng.latitude);
+                mDatabaseUsers.child("longitude").setValue(latLng.longitude);
             }
 
             @Override
@@ -395,23 +399,40 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
 
-    public void getDirections(){
+    public void getDirections(LatLng destination){
+        //LatLng destination = getDestination();
         StringBuilder sb = new StringBuilder();
         Object[] dataTransfer = new Object[4];
 
         sb.append("https://maps.googleapis.com/maps/api/directions/json?");
         sb.append("origin=" + mLastLocation.getLatitude() + "," + mLastLocation.getLongitude());
-        sb.append("&destination="+ -15.3931774 + "," + 28.3338944);
+        sb.append("&destination="+ destination.latitude + "," + destination.longitude);
         sb.append("&waypoints="+ waypoints());
         sb.append("&key="+getResources().getString(R.string.API_key));
 
         dataTransfer[0] = mMap;
         dataTransfer[1] = sb.toString();
         dataTransfer[2] = new LatLng(mLastLocation.getLatitude() , mLastLocation.getLongitude());
-        dataTransfer[3] = new LatLng(-15.3931774, 28.3338944);
+        dataTransfer[3] = destination;
 
         GetDirectionsData getDirectionsData = new GetDirectionsData(getApplicationContext());
         getDirectionsData.execute(dataTransfer);
+    }
+
+    private void getDestination() {
+        mDatabaseUsers.child("school").addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                School school = dataSnapshot.getValue(School.class);
+                LatLng destination = new LatLng(school.getLatitude(), school.getLongitude());
+                getDirections(destination);
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        });
     }
 
     private String waypoints() {

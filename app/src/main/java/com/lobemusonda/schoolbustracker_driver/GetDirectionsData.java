@@ -6,7 +6,9 @@ import android.os.AsyncTask;
 import android.util.Log;
 
 import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.maps.android.PolyUtil;
 
@@ -101,6 +103,11 @@ class GetDirectionsData extends AsyncTask<Object, String, String> {
 
                 mMap.addPolyline(options);
             }
+            MarkerOptions markerOptions = new MarkerOptions();
+            markerOptions.position(endLatlng);
+            markerOptions.title("School");
+            markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED));
+            mMap.addMarker(markerOptions);
         } catch (JSONException e) {
             e.printStackTrace();
         }
