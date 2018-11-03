@@ -38,6 +38,7 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -56,7 +57,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1234;
 
     private FirebaseAuth mAuth;
-    private DatabaseReference mDatabaseUsers, mDatabaseLocation;
+    private DatabaseReference mDatabaseUser, mDatabaseLocation;
 
     private Button mButtonStatus;
     private ProgressBar mProgressBar;
@@ -76,7 +77,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         setContentView(R.layout.activity_maps);
 
         mAuth = FirebaseAuth.getInstance();
-        mDatabaseUsers = FirebaseDatabase.getInstance().getReference().child("users").child(mAuth.getCurrentUser().getUid());
+        mDatabaseUser = FirebaseDatabase.getInstance().getReference().child("users").child(mAuth.getCurrentUser().getUid());
         mDatabaseLocation = FirebaseDatabase.getInstance().getReference("locations").child(mAuth.getCurrentUser().getUid());
 
         mChildrenLocations = new ArrayList<>();
@@ -102,6 +103,35 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        if (mAuth.getCurrentUser() != null) {
+//            Handle the already Logged in user
+            checkSchool(mAuth.getCurrentUser());
+        }
+    }
+
+    private void checkSchool(FirebaseUser currentUser) {
+        mDatabaseUser.child("school")
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot dataSnapshot) {
+                        if (!dataSnapshot.exists()) {
+                            Intent intent = new Intent(MapsActivity.this, AddSchoolActivity.class);
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                            startActivity(intent);
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(DatabaseError databaseError) {
+
+                    }
+                });
     }
 
     @Override
@@ -135,7 +165,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void toggleStatus() {
-        mDatabaseUsers.child("status")
+        mDatabaseUser.child("status")
                 .addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
                     public void onDataChange(DataSnapshot dataSnapshot) {
@@ -159,7 +189,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void updateStatus(String status) {
-        mDatabaseUsers.child("status").setValue(status).addOnCompleteListener(new OnCompleteListener<Void>() {
+        mDatabaseUser.child("status").setValue(status).addOnCompleteListener(new OnCompleteListener<Void>() {
             @Override
             public void onComplete(@NonNull Task<Void> task) {
                 mProgressBar.setVisibility(View.GONE);
@@ -168,7 +198,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void getStatus() {
-        mDatabaseUsers.addValueEventListener(new ValueEventListener() {
+        mDatabaseUser.addValueEventListener(new ValueEventListener() {
 
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
@@ -335,11 +365,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void shareLocation(final LatLng latLng) {
-        mDatabaseUsers.addListenerForSingleValueEvent(new ValueEventListener() {
+        mDatabaseUser.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
-                mDatabaseUsers.child("latitude").setValue(latLng.latitude);
-                mDatabaseUsers.child("longitude").setValue(latLng.longitude);
+                mDatabaseUser.child("latitude").setValue(latLng.latitude);
+                mDatabaseUser.child("longitude").setValue(latLng.longitude);
             }
 
             @Override
@@ -420,7 +450,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void getDestination() {
-        mDatabaseUsers.child("school").addListenerForSingleValueEvent(new ValueEventListener() {
+        mDatabaseUser.child("school").addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 School school = dataSnapshot.getValue(School.class);

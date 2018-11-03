@@ -73,7 +73,7 @@ public class AddSchoolActivity extends AppCompatActivity implements LocationList
             return;
         }
         //Update database
-        mDatabase.child("schools").child(school.getName()).setValue(mAuth.getCurrentUser().getUid());
+        mDatabase.child("schools").child(mAuth.getCurrentUser().getUid()).setValue(school.getName());
 
         // Update driver profile
         mDatabase.child("users").child(mAuth.getCurrentUser().getUid()).child("school")
