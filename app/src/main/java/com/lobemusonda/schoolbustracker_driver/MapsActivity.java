@@ -38,7 +38,6 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -66,10 +65,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private GoogleApiClient mClient;
     private LocationRequest mLocationRequest;
     private Location mLastLocation;
+    private LatLng mDestination;
     private Marker mCurrentLocationMarker;
 
-    private boolean mIsOnline;
+    private boolean mIsOnline, mIsMoving;
     private ArrayList<ChildLocation> mChildrenLocations;
+    private ArrayList<String> mChildrenIDs, mParentIDs;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,6 +82,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         mDatabaseLocation = FirebaseDatabase.getInstance().getReference("locations").child(mAuth.getCurrentUser().getUid());
 
         mChildrenLocations = new ArrayList<>();
+        mChildrenIDs = new ArrayList<>();
+        mParentIDs = new ArrayList<>();
 
         getStatus();
 
@@ -109,12 +112,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     protected void onStart() {
         super.onStart();
         if (mAuth.getCurrentUser() != null) {
-//            Handle the already Logged in user
-            checkSchool(mAuth.getCurrentUser());
+//            Checks if the driver registered a school
+            checkSchool();
         }
     }
 
-    private void checkSchool(FirebaseUser currentUser) {
+    private void checkSchool() {
         mDatabaseUser.child("school")
                 .addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
@@ -173,8 +176,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         String value = dataSnapshot.getValue(String.class);
                         if (value.equals("offline")) {
                             updateStatus("online");
-                            getLocations();
-                            getDestination();
                         } else {
                             updateStatus("offline");
                             mMap.clear();
@@ -204,8 +205,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             public void onDataChange(DataSnapshot dataSnapshot) {
                 if (dataSnapshot.child("status").getValue().equals("online")) {
                     mIsOnline = true;
+                    mIsMoving = true;
                 } else {
                     mIsOnline = false;
+                    mIsMoving = false;
                 }
             }
 
@@ -221,11 +224,15 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 mChildrenLocations.clear();
+                mChildrenIDs.clear();
+                mParentIDs.clear();
                 for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
                     ChildLocation childLocation = snapshot.getValue(ChildLocation.class);
                     mChildrenLocations.add(childLocation);
+                    mChildrenIDs.add(snapshot.getKey());
+                    mParentIDs.add(childLocation.getParentID());
                 }
-                setLocationMarkers();
+                getDestination();
             }
 
             @Override
@@ -236,6 +243,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void setLocationMarkers() {
+        int i = 0;
         for (ChildLocation childLocation: mChildrenLocations) {
             MarkerOptions markerOptions = new MarkerOptions();
             double latitude = childLocation.getPickUp().getLatitude();
@@ -247,6 +255,46 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             markerOptions.title(station);
             markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN));
             mMap.addMarker(markerOptions);
+
+            if (hasArrived(latLng) == 1) {
+                mIsMoving = false;
+                Log.d(TAG, "setLocationMarkers: iteration" + i++);
+                Intent intent = new Intent(MapsActivity.this, RegistrationActivity.class);
+                intent.putExtra(RegistrationActivity.EXTRA_CHILD_IDS, mChildrenIDs);
+                intent.putExtra(RegistrationActivity.EXTRA_PARENT_IDS, mParentIDs);
+                startActivity(intent);
+                break;
+            } else if (hasArrived(latLng) == 2) {
+                Intent intent = new Intent(MapsActivity.this, CompleteActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(intent);
+                break;
+            }
+        }
+    }
+
+    private int hasArrived(LatLng markerLatLng) {
+        // marker location
+        Location markerLocation = new Location("");
+        markerLocation.setLatitude(markerLatLng.latitude);
+        markerLocation.setLongitude(markerLatLng.longitude);
+
+        // destination location
+        Location destinationLocation = new Location("");
+        destinationLocation.setLatitude(mDestination.latitude);
+        destinationLocation.setLongitude(mDestination.longitude);
+
+        float distanceInMetersOne = mLastLocation.distanceTo(markerLocation);
+        float distanceInMetersTwo = mLastLocation.distanceTo(destinationLocation);
+
+        if (distanceInMetersOne <= 30) {
+            return 1;
+        } else if (distanceInMetersTwo <= 30) {
+            return 2;
+        }
+        else {
+            return 0;
         }
     }
 
@@ -340,7 +388,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                     mCurrentLocationMarker = mMap.addMarker(markerOptions);
 
-                    shareLocation(latLng);
+                    if (mIsMoving) {
+                        shareLocation(latLng);
+                        getLocations();
+                    }
                 } else {
                     mButtonStatus.setText(R.string.offline);
                 }
@@ -425,25 +476,24 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         if (mClient != null) {
             LocationServices.FusedLocationApi.removeLocationUpdates(mClient, this);
         }
-
     }
 
 
-    public void getDirections(LatLng destination){
+    public void getDirections(){
         //LatLng destination = getDestination();
         StringBuilder sb = new StringBuilder();
         Object[] dataTransfer = new Object[4];
 
         sb.append("https://maps.googleapis.com/maps/api/directions/json?");
         sb.append("origin=" + mLastLocation.getLatitude() + "," + mLastLocation.getLongitude());
-        sb.append("&destination="+ destination.latitude + "," + destination.longitude);
+        sb.append("&destination="+ mDestination.latitude + "," + mDestination.longitude);
         sb.append("&waypoints="+ waypoints());
         sb.append("&key="+getResources().getString(R.string.API_key));
 
         dataTransfer[0] = mMap;
         dataTransfer[1] = sb.toString();
         dataTransfer[2] = new LatLng(mLastLocation.getLatitude() , mLastLocation.getLongitude());
-        dataTransfer[3] = destination;
+        dataTransfer[3] = mDestination;
 
         GetDirectionsData getDirectionsData = new GetDirectionsData(getApplicationContext());
         getDirectionsData.execute(dataTransfer);
@@ -455,7 +505,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             public void onDataChange(DataSnapshot dataSnapshot) {
                 School school = dataSnapshot.getValue(School.class);
                 LatLng destination = new LatLng(school.getLatitude(), school.getLongitude());
-                getDirections(destination);
+                mDestination = destination;
+                getDirections();
+                setLocationMarkers();
             }
 
             @Override
