@@ -258,7 +258,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             if (hasArrived(latLng) == 1) {
                 mIsMoving = false;
-                Log.d(TAG, "setLocationMarkers: iteration" + i++);
                 Intent intent = new Intent(MapsActivity.this, RegistrationActivity.class);
                 intent.putExtra(RegistrationActivity.EXTRA_CHILD_IDS, mChildrenIDs);
                 intent.putExtra(RegistrationActivity.EXTRA_PARENT_IDS, mParentIDs);

@@ -4,12 +4,40 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
-
-    <android.support.v7.widget.RecyclerView
-        android:id="@+id/recycler_view"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:scrollbars="vertical"/>
+        android:orientation="vertical">
+
+        <android.support.v7.widget.RecyclerView
+            android:id="@+id/recycler_view"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="9"
+            android:scrollbars="vertical"/>
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <com.ebanx.swipebtn.SwipeButton
+                android:id="@+id/swipe_button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:inner_text="SWIPE TO CONTINUE"
+                android:layout_margin="8dp"
+                app:inner_text_size="18sp"
+                app:inner_text_top_padding="10dp"
+                app:inner_text_bottom_padding="10dp"
+                app:button_image_disabled="@drawable/ic_lock_close"
+                app:button_image_enabled="@drawable/ic_lock_open"
+                app:button_top_padding="10dp"
+                app:button_bottom_padding="10dp"
+                app:button_left_padding="10dp"
+                app:button_right_padding="10dp"/>
+
+        </RelativeLayout>
+    </LinearLayout>
 
     <ProgressBar
         android:id="@+id/progressBar"
