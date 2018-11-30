@@ -52,11 +52,14 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         LocationListener {
 
     private static final String TAG = "MapsActivity";
+    public static final String EXTRA_PCIDS = "PCIDs";
     private static final float DEFAULT_ZOOM = 15f;
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1234;
 
     private FirebaseAuth mAuth;
     private DatabaseReference mDatabaseUser, mDatabaseLocation;
+
+    private Intent mIntent;
 
     private Button mButtonStatus;
     private ProgressBar mProgressBar;
@@ -70,7 +73,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private boolean mIsOnline, mIsMoving;
     private ArrayList<ChildLocation> mChildrenLocations;
-    private ArrayList<String> mChildrenIDs, mParentIDs;
+    private ArrayList<String> mChildrenIDs, mParentIDs, mPCIDs;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,6 +84,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         mDatabaseUser = FirebaseDatabase.getInstance().getReference().child("users").child(mAuth.getCurrentUser().getUid());
         mDatabaseLocation = FirebaseDatabase.getInstance().getReference("locations").child(mAuth.getCurrentUser().getUid());
 
+        mIntent = getIntent();
+        if (mIntent.hasExtra(EXTRA_PCIDS)) {
+            mPCIDs = mIntent.getStringArrayListExtra(EXTRA_PCIDS);
+        } else {
+            mPCIDs = new ArrayList<>();
+        }
         mChildrenLocations = new ArrayList<>();
         mChildrenIDs = new ArrayList<>();
         mParentIDs = new ArrayList<>();
@@ -205,7 +214,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             public void onDataChange(DataSnapshot dataSnapshot) {
                 if (dataSnapshot.child("status").getValue().equals("online")) {
                     mIsOnline = true;
-                    mIsMoving = true;
+                    if (mIntent.hasExtra(EXTRA_PCIDS)) {
+                        mIsMoving = false;
+                    } else {
+                        mIsMoving = true;
+                    }
                 } else {
                     mIsOnline = false;
                     mIsMoving = false;
@@ -228,9 +241,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 mParentIDs.clear();
                 for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
                     ChildLocation childLocation = snapshot.getValue(ChildLocation.class);
-                    mChildrenLocations.add(childLocation);
-                    mChildrenIDs.add(snapshot.getKey());
-                    mParentIDs.add(childLocation.getParentID());
+                    if (!mPCIDs.contains(snapshot.getKey())) {
+                        mChildrenLocations.add(childLocation);
+                        mChildrenIDs.add(snapshot.getKey());
+                        mParentIDs.add(childLocation.getParentID());
+                    }
                 }
                 getDestination();
             }
@@ -257,17 +272,22 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             mMap.addMarker(markerOptions);
 
             if (hasArrived(latLng) == 1) {
-                mIsMoving = false;
-                Intent intent = new Intent(MapsActivity.this, RegistrationActivity.class);
-                intent.putExtra(RegistrationActivity.EXTRA_CHILD_IDS, mChildrenIDs);
-                intent.putExtra(RegistrationActivity.EXTRA_PARENT_IDS, mParentIDs);
-                startActivity(intent);
+                if (mIsMoving){
+                    Intent intent = new Intent(MapsActivity.this, RegistrationActivity.class);
+                    intent.putExtra(RegistrationActivity.EXTRA_CHILD_IDS, mChildrenIDs);
+                    intent.putExtra(RegistrationActivity.EXTRA_PARENT_IDS, mParentIDs);
+                    mIsMoving = false;
+                    startActivity(intent);
+                }
                 break;
             } else if (hasArrived(latLng) == 2) {
-                Intent intent = new Intent(MapsActivity.this, CompleteActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                startActivity(intent);
+                if (mIsMoving) {
+                    Intent intent = new Intent(MapsActivity.this, CompleteActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    mIsMoving = false;
+                    startActivity(intent);
+                }
                 break;
             }
         }
@@ -287,9 +307,14 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         float distanceInMetersOne = mLastLocation.distanceTo(markerLocation);
         float distanceInMetersTwo = mLastLocation.distanceTo(destinationLocation);
 
-        if (distanceInMetersOne <= 30) {
-            return 1;
-        } else if (distanceInMetersTwo <= 30) {
+        if (distanceInMetersOne > 30) {
+            mIsMoving = true;
+        } else {
+            if (distanceInMetersOne <= 30) {
+                return 1;
+            }
+        }
+        if (distanceInMetersTwo <= 30) {
             return 2;
         }
         else {
@@ -389,8 +414,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                     if (mIsMoving) {
                         shareLocation(latLng);
-                        getLocations();
                     }
+
+                    getLocations();
                 } else {
                     mButtonStatus.setText(R.string.offline);
                 }

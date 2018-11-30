@@ -8,11 +8,9 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.View;
-import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.ebanx.swipebtn.OnStateChangeListener;
 import com.ebanx.swipebtn.SwipeButton;
@@ -133,6 +131,12 @@ public class RegistrationActivity extends AppCompatActivity {
                 }
             });
         }
+
+        Intent intent = new Intent(RegistrationActivity.this, MapsActivity.class);
+        intent.putExtra(MapsActivity.EXTRA_PCIDS, mPCIDs);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
     }
 
     private void registerChild(final int position, CompoundButton compoundButton, boolean b) {
