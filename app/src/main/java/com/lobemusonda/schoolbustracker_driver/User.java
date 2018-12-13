@@ -6,7 +6,7 @@ package com.lobemusonda.schoolbustracker_driver;
 
 public class User {
     public String name, email, busNo, type, status;
-    public double latitude, longitude;
+    public double latitude, longitude, speed;
 
     public User() {
 
@@ -18,6 +18,7 @@ public class User {
         this.status = "offline";
         this.latitude = 0.0;
         this.longitude = 0.0;
+        this.speed = 0.0;
     }
 
     public User (double latitude, double longitude, String status) {

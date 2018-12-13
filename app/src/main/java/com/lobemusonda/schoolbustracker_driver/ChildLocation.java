@@ -5,17 +5,22 @@ package com.lobemusonda.schoolbustracker_driver;
  */
 
 public class ChildLocation {
-    private String parentID;
+    private String parentID, status;
     private BusStation pickUp, dropOff;
 
     public ChildLocation() {
 
     }
 
-    public ChildLocation(String parentID, BusStation pickUp, BusStation dropOff) {
+    public ChildLocation(String parentID, BusStation pickUp, BusStation dropOff, String status) {
         this.parentID = parentID;
         this.pickUp = pickUp;
         this.dropOff = dropOff;
+        this.status = status;
+    }
+
+    public String getStatus() {
+        return status;
     }
 
     public String getParentID() {

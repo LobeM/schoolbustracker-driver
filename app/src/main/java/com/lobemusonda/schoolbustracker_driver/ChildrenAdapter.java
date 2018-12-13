@@ -89,8 +89,7 @@ public class ChildrenAdapter extends RecyclerView.Adapter<ChildrenAdapter.Childr
     }
 
     private void checkStatus(String status, ChildrenViewHolder holder) {
-        if (status.equals("inBus")) {
-//            holder.mCheckBox.setChecked(true);
+        if (status.equals("inBus") || status.equals("absent")) {
             holder.mChildName.setPaintFlags(holder.mChildName.getPaintFlags()|Paint.STRIKE_THRU_TEXT_FLAG);
         }
     }

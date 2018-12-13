@@ -15,6 +15,8 @@ import android.widget.TextView;
 import com.ebanx.swipebtn.OnStateChangeListener;
 import com.ebanx.swipebtn.SwipeButton;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.FirebaseDatabase;
@@ -27,6 +29,7 @@ public class RegistrationActivity extends AppCompatActivity {
     public static final String EXTRA_PARENT_IDS = "Parent IDs";
     private static final String TAG = "RegistrationActivity";
 
+    private FirebaseUser mUser;
     private FirebaseDatabase mDatabase;
 
     private ProgressBar mProgressBar;
@@ -43,6 +46,7 @@ public class RegistrationActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_registration);
 
+        mUser = FirebaseAuth.getInstance().getCurrentUser();
         mDatabase = FirebaseDatabase.getInstance();
 
         Intent intent = getIntent();
@@ -122,21 +126,24 @@ public class RegistrationActivity extends AppCompatActivity {
 
     private void updateChildrenStatus() {
         for (int i = 0; i < mPCIDs.size(); i++) {
-                mDatabase.getReference("children").child(mPPIDs.get(i))
-                .child(mPCIDs.get(i)).child("status").setValue("inBus")
+            final String parentID = mPPIDs.get(i);
+            final String childID = mPCIDs.get(i);
+            mDatabase.getReference("children").child(parentID)
+                .child(childID).child("status").setValue("inBus")
                 .addOnSuccessListener(new OnSuccessListener<Void>() {
                 @Override
                 public void onSuccess(Void aVoid) {
-
+                    updateChildLocation(childID);
                 }
             });
         }
 
         Intent intent = new Intent(RegistrationActivity.this, MapsActivity.class);
-        intent.putExtra(MapsActivity.EXTRA_PCIDS, mPCIDs);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
+    }
+
+    private void updateChildLocation(String childID) {
+        mDatabase.getReference("locations").child(mUser.getUid()).child(childID).child("status").setValue("inBus");
     }
 
     private void registerChild(final int position, CompoundButton compoundButton, boolean b) {

@@ -45,6 +45,9 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.concurrent.TimeUnit;
 
 public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback,
         GoogleApiClient.ConnectionCallbacks,
@@ -52,14 +55,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         LocationListener {
 
     private static final String TAG = "MapsActivity";
-    public static final String EXTRA_PCIDS = "PCIDs";
     private static final float DEFAULT_ZOOM = 15f;
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1234;
 
     private FirebaseAuth mAuth;
-    private DatabaseReference mDatabaseUser, mDatabaseLocation;
-
-    private Intent mIntent;
+    private DatabaseReference mDatabaseUser, mDatabaseLocation, mDatabaseMessage;
 
     private Button mButtonStatus;
     private ProgressBar mProgressBar;
@@ -68,12 +68,15 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private GoogleApiClient mClient;
     private LocationRequest mLocationRequest;
     private Location mLastLocation;
+    private LocationManager lm;
+    private android.location.LocationListener mLocationListener;
     private LatLng mDestination;
     private Marker mCurrentLocationMarker;
 
     private boolean mIsOnline, mIsMoving;
     private ArrayList<ChildLocation> mChildrenLocations;
-    private ArrayList<String> mChildrenIDs, mParentIDs, mPCIDs;
+    private ArrayList<String> mChildrenIDs, mParentIDs;
+    private Date mLastTimeStamp;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -83,13 +86,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         mAuth = FirebaseAuth.getInstance();
         mDatabaseUser = FirebaseDatabase.getInstance().getReference().child("users").child(mAuth.getCurrentUser().getUid());
         mDatabaseLocation = FirebaseDatabase.getInstance().getReference("locations").child(mAuth.getCurrentUser().getUid());
+        mDatabaseMessage = FirebaseDatabase.getInstance().getReference("messages").child(mAuth.getCurrentUser().getUid());
 
-        mIntent = getIntent();
-        if (mIntent.hasExtra(EXTRA_PCIDS)) {
-            mPCIDs = mIntent.getStringArrayListExtra(EXTRA_PCIDS);
-        } else {
-            mPCIDs = new ArrayList<>();
-        }
+
         mChildrenLocations = new ArrayList<>();
         mChildrenIDs = new ArrayList<>();
         mParentIDs = new ArrayList<>();
@@ -172,6 +171,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 intent = new Intent(MapsActivity.this, AddSchoolActivity.class);
                 startActivity(intent);
                 break;
+
+            case R.id.menuSettings:
+                intent = new Intent(MapsActivity.this, ChangePasswordActivity.class);
+                startActivity(intent);
+                break;
         }
         return super.onOptionsItemSelected(item);
     }
@@ -214,11 +218,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             public void onDataChange(DataSnapshot dataSnapshot) {
                 if (dataSnapshot.child("status").getValue().equals("online")) {
                     mIsOnline = true;
-                    if (mIntent.hasExtra(EXTRA_PCIDS)) {
-                        mIsMoving = false;
-                    } else {
-                        mIsMoving = true;
-                    }
+                    mIsMoving = true;
                 } else {
                     mIsOnline = false;
                     mIsMoving = false;
@@ -241,7 +241,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 mParentIDs.clear();
                 for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
                     ChildLocation childLocation = snapshot.getValue(ChildLocation.class);
-                    if (!mPCIDs.contains(snapshot.getKey())) {
+                    if (childLocation.getStatus().equals("dropped")){
                         mChildrenLocations.add(childLocation);
                         mChildrenIDs.add(snapshot.getKey());
                         mParentIDs.add(childLocation.getParentID());
@@ -258,7 +258,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void setLocationMarkers() {
-        int i = 0;
         for (ChildLocation childLocation: mChildrenLocations) {
             MarkerOptions markerOptions = new MarkerOptions();
             double latitude = childLocation.getPickUp().getLatitude();
@@ -272,22 +271,17 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             mMap.addMarker(markerOptions);
 
             if (hasArrived(latLng) == 1) {
-                if (mIsMoving){
-                    Intent intent = new Intent(MapsActivity.this, RegistrationActivity.class);
-                    intent.putExtra(RegistrationActivity.EXTRA_CHILD_IDS, mChildrenIDs);
-                    intent.putExtra(RegistrationActivity.EXTRA_PARENT_IDS, mParentIDs);
-                    mIsMoving = false;
-                    startActivity(intent);
-                }
+
+                Intent intent = new Intent(MapsActivity.this, RegistrationActivity.class);
+                intent.putExtra(RegistrationActivity.EXTRA_CHILD_IDS, mChildrenIDs);
+                intent.putExtra(RegistrationActivity.EXTRA_PARENT_IDS, mParentIDs);
+                startActivity(intent);
                 break;
             } else if (hasArrived(latLng) == 2) {
-                if (mIsMoving) {
-                    Intent intent = new Intent(MapsActivity.this, CompleteActivity.class);
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                    mIsMoving = false;
-                    startActivity(intent);
-                }
+                Intent intent = new Intent(MapsActivity.this, CompleteActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(intent);
                 break;
             }
         }
@@ -307,14 +301,17 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         float distanceInMetersOne = mLastLocation.distanceTo(markerLocation);
         float distanceInMetersTwo = mLastLocation.distanceTo(destinationLocation);
 
-        if (distanceInMetersOne > 30) {
-            mIsMoving = true;
-        } else {
-            if (distanceInMetersOne <= 30) {
-                return 1;
-            }
+
+        if (distanceInMetersOne <= 30) {
+            mIsMoving = false;
+            lm.removeUpdates(mLocationListener);
+            lm = null;
+            return 1;
         }
         if (distanceInMetersTwo <= 30) {
+            mIsMoving = false;
+            lm.removeUpdates(mLocationListener);
+            lm = null;
             return 2;
         }
         else {
@@ -381,7 +378,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             LocationServices.FusedLocationApi.requestLocationUpdates(mClient, mLocationRequest, this);
         }
 
-        LocationManager lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             // TODO: Consider calling
             //    ActivityCompat#requestPermissions
@@ -392,7 +389,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             // for ActivityCompat#requestPermissions for more details.
             return;
         }
-        lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, new android.location.LocationListener() {
+
+        mLocationListener = new android.location.LocationListener() {
             @Override
             public void onLocationChanged(Location location) {
                 //Log.d(TAG, "onLocationChanged: called in request location updates");
@@ -405,6 +403,15 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                 if (mIsOnline) {
                     mButtonStatus.setText(R.string.online);
+
+                    double theSpeed = location.getSpeed();
+                    theSpeed = theSpeed * 3.6;
+                    if (theSpeed > 0) {
+                        updateSpeed(theSpeed);
+                    }
+                    if (theSpeed > 2) {
+                        reportOverSpeed();
+                    }
                     MarkerOptions markerOptions = new MarkerOptions();
                     markerOptions.position(latLng);
                     markerOptions.title("ChildLocation");
@@ -414,30 +421,55 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                     if (mIsMoving) {
                         shareLocation(latLng);
+                        getLocations();
                     }
 
-                    getLocations();
                 } else {
                     mButtonStatus.setText(R.string.offline);
                 }
-
             }
 
             @Override
             public void onStatusChanged(String s, int i, Bundle bundle) {
-                Log.d(TAG, "onStatusChanged: called");
+
             }
 
             @Override
             public void onProviderEnabled(String s) {
-                Log.d(TAG, "onProviderEnabled: called");
+
             }
 
             @Override
             public void onProviderDisabled(String s) {
-                Log.d(TAG, "onProviderDisabled: called");
+
             }
-        });
+        };
+
+        lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, mLocationListener);
+    }
+
+    private void reportOverSpeed() {
+        String id = mDatabaseMessage.push().getKey();
+        Date currentTime = Calendar.getInstance().getTime();
+        if (mLastTimeStamp == null) {
+            mLastTimeStamp = Calendar.getInstance().getTime();
+            Message message = new Message("Over Speeding", mAuth.getCurrentUser().getDisplayName(), "Driver reported moving above the speed limit (80kph)", currentTime.toString());
+            mDatabaseMessage.child(id).setValue(message);
+        }
+        if (getDateDiff(mLastTimeStamp,currentTime,TimeUnit.MINUTES) > 40) {
+            Message message = new Message("Over Speeding", mAuth.getCurrentUser().getDisplayName(), "Driver reported moving above the speed limit (80kph)", currentTime.toString());
+            mDatabaseMessage.child(id).setValue(message);
+        }
+    }
+
+    public static long getDateDiff(Date date1, Date date2, TimeUnit timeUnit) {
+        long diffInMillies = date2.getTime() - date1.getTime();
+        return timeUnit.convert(diffInMillies,TimeUnit.MILLISECONDS);
+    }
+
+    private void updateSpeed(double speed) {
+        mDatabaseUser.child("speed").setValue(speed);
+
     }
 
     private void shareLocation(final LatLng latLng) {

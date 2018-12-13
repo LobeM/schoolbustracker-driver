@@ -43,6 +43,28 @@
             android:layout_height="wrap_content"
             android:text="@string/login"/>
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/txt_forgot_password"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="6dp"
+                android:text="@string/forgot_password"/>
+
+            <TextView
+                android:id="@+id/txt_create_account"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="6dp"
+                android:textColor="@color/colorPrimary"
+                android:text="@string/create_account"/>
+        </LinearLayout>
+
     </LinearLayout>
 
 
