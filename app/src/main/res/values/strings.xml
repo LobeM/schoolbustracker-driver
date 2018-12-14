@@ -32,4 +32,8 @@
     <string name="forgot_password">Forgot Password?</string>
     <string name="create_account">Create Account</string>
     <string name="settings">Change Password</string>
+    <string name="arrived">Arrived at destination</string>
+    <string name="picked_children">Picked Children:</string>
+    <string name="absent_children">Absent Children:</string>
+    <string name="total">Total:</string>
 </resources>

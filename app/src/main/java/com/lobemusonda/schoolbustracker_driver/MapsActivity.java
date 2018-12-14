@@ -279,8 +279,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 break;
             } else if (hasArrived(latLng) == 2) {
                 Intent intent = new Intent(MapsActivity.this, CompleteActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
                 startActivity(intent);
                 break;
             }
@@ -307,11 +305,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             lm.removeUpdates(mLocationListener);
             lm = null;
             return 1;
-        }
-        if (distanceInMetersTwo <= 30) {
+        } else if (distanceInMetersTwo <= 30) {
             mIsMoving = false;
-            lm.removeUpdates(mLocationListener);
-            lm = null;
+            if (lm != null) {
+                lm.removeUpdates(mLocationListener);
+                lm = null;
+            }
             return 2;
         }
         else {
