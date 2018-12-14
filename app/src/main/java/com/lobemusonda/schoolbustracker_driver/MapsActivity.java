@@ -408,7 +408,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     if (theSpeed > 0) {
                         updateSpeed(theSpeed);
                     }
-                    if (theSpeed > 2) {
+                    if (theSpeed > 80) {
                         reportOverSpeed();
                     }
                     MarkerOptions markerOptions = new MarkerOptions();
